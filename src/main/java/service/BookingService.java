@@ -19,15 +19,28 @@ public class BookingService {
     }
 
     public Booking bookSeats(Booking booking) {
-        List<Seat> selectedSeats = seatRepository.findAllById(booking.getSeats().stream().map(Seat::getId).toList());
-        
+        booking.setPaymentStatus("PENDING"); // Automatically set to "PENDING"
+
+        // Fetch the seats from DB using their IDs
+        List<Seat> selectedSeats = seatRepository.findAllById(
+            booking.getSeats().stream().map(Seat::getId).toList()
+        );
+
+        // Check if any seat is already booked
         if (selectedSeats.stream().anyMatch(seat -> !seat.isAvailable())) {
             throw new RuntimeException("One or more seats are already booked");
         }
 
+        // Mark seats as unavailable
         selectedSeats.forEach(seat -> seat.setAvailable(false));
+
+        // Save updated seats
         seatRepository.saveAll(selectedSeats);
 
+        // 🔥 Update booking with the correct seat references before saving
+        booking.setSeats(selectedSeats);
+
+        // Save the booking
         return bookingRepository.save(booking);
     }
 }
